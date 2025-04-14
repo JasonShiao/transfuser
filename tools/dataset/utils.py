@@ -10,7 +10,6 @@ import numpy as np
 
 import carla
 from agents.navigation.global_route_planner import GlobalRoutePlanner
-from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 from agents.navigation.local_planner import RoadOption
 
 ALL_TOWNS = ['Town01', 'Town02', 'Town03', 'Town04', 'Town05', 'Town06', 'Town07', 'Town10HD']
@@ -275,8 +274,7 @@ def interpolate_trajectory(world_map, waypoints_trajectory, hop_resolution=1.0):
         route: full interpolated route both in GPS coordinates and also in its original form.
     """
 
-    dao = GlobalRoutePlannerDAO(world_map, hop_resolution)
-    grp = GlobalRoutePlanner(dao)
+    grp = GlobalRoutePlanner(world_map, hop_resolution)
     grp.setup()
     # Obtain route plan
     route = []

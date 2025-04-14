@@ -17,20 +17,32 @@ from torchvision import models
 # Copyright (c) OpenMMLab. All rights reserved.
 import torch
 import torch.nn as nn
-from mmcv.cnn import bias_init_with_prob, normal_init
-from mmcv.ops import batched_nms
-from mmcv.runner import force_fp32
+from mmengine.model.weight_init import normal_init
+from torchvision.ops import batched_nms
+from mmengine.runner.amp import autocast
 
-from mmdet.core import multi_apply
-from mmdet.models import HEADS, build_loss
+from mmengine.registry import MODELS
+from mmdet.models.utils import multi_apply
 from mmdet.models.utils import gaussian_radius, gen_gaussian_target
 from mmdet.models.utils.gaussian_target import (get_local_maximum, get_topk_from_heatmap,
                                      transpose_and_gather_feat)
 from mmdet.models.dense_heads.base_dense_head import BaseDenseHead
 from mmdet.models.dense_heads.dense_test_mixins import BBoxTestMixin
 
+from mmdet.models.losses import SmoothL1Loss, CrossEntropyLoss, GaussianFocalLoss, L1Loss
+MODELS.register_module(name='GaussianFocalLoss', module=GaussianFocalLoss)
+MODELS.register_module(name='L1Loss', module=L1Loss)
+MODELS.register_module(name='SmoothL1Loss', module=SmoothL1Loss)
+MODELS.register_module(name='CrossEntropyLoss', module=CrossEntropyLoss)
 
-@HEADS.register_module()
+
+import math
+
+def bias_init_with_prob(prob):
+    """Equivalent of mmcv's bias_init_with_prob (removed in mmcv>=2.x)."""
+    return -math.log((1 - prob) / prob)
+
+@MODELS.register_module()
 class LidarCenterNetHead(BaseDenseHead, BBoxTestMixin):
     """Objects as Points Head. CenterHead use center_point to indicate object's
     position. Paper link <https://arxiv.org/abs/1904.07850>
@@ -77,13 +89,13 @@ class LidarCenterNetHead(BaseDenseHead, BBoxTestMixin):
         self.velocity_head = self._build_head(in_channel, feat_channel, 1)
         self.brake_head = self._build_head(in_channel, feat_channel, 2)
 
-        self.loss_center_heatmap = build_loss(loss_center_heatmap)
-        self.loss_wh = build_loss(loss_wh)
-        self.loss_offset = build_loss(loss_offset)
-        self.loss_dir_class = build_loss(loss_dir_class)
-        self.loss_dir_res = build_loss(loss_dir_res)
-        self.loss_velocity = build_loss(loss_velocity)
-        self.loss_brake = build_loss(loss_brake)
+        self.loss_center_heatmap = MODELS.build(loss_center_heatmap)
+        self.loss_wh = MODELS.build(loss_wh)
+        self.loss_offset = MODELS.build(loss_offset)
+        self.loss_dir_class = MODELS.build(loss_dir_class)
+        self.loss_dir_res = MODELS.build(loss_dir_res)
+        self.loss_velocity = MODELS.build(loss_velocity)
+        self.loss_brake = MODELS.build(loss_brake)
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
@@ -146,8 +158,13 @@ class LidarCenterNetHead(BaseDenseHead, BBoxTestMixin):
 
         return center_heatmap_pred, wh_pred, offset_pred, yaw_class_pred, yaw_res_pred, velocity_pred, brake_pred
 
-    @force_fp32(apply_to=('center_heatmap_preds', 'wh_preds', 'offset_preds', 'yaw_class_preds', 'yaw_res_preds', 'velocity_pred', 'brake_pred'))
-    def loss(self,
+    def loss(self, *args, **kwargs):
+        """Wrapper to call loss_by_feat — required by MMDet 3.0+."""
+        return self.loss_by_feat(*args, **kwargs)
+
+    #@force_fp32(apply_to=('center_heatmap_preds', 'wh_preds', 'offset_preds', 'yaw_class_preds', 'yaw_res_preds', 'velocity_pred', 'brake_pred'))
+    @autocast(enabled=False)
+    def loss_by_feat(self,
              center_heatmap_preds,
              wh_preds,
              offset_preds,
@@ -499,18 +516,19 @@ class LidarCenterNetHead(BaseDenseHead, BBoxTestMixin):
     def _bboxes_nms(self, bboxes, labels, cfg):
         if labels.numel() == 0:
             return bboxes, labels
+        
+        scores = bboxes[:, -1]
+        iou_threshold = cfg.nms_cfg.get('iou_threshold', 0.5)
 
-        out_bboxes, keep = batched_nms(bboxes[:, :4].contiguous(),
-                                       bboxes[:, -1].contiguous(), labels,
-                                       cfg.nms_cfg)
+        keep = batched_nms(bboxes[:, :4], scores, labels, iou_threshold)
+        out_bboxes = bboxes[keep]
         out_labels = labels[keep]
 
-        if len(out_bboxes) > 0:
-            idx = torch.argsort(out_bboxes[:, -1], descending=True)
-            idx = idx[:cfg.max_per_img]
-            out_bboxes = out_bboxes[idx]
-            out_labels = out_labels[idx]
-
+        if out_bboxes.size(0) > cfg.max_per_img:
+            topk = torch.argsort(out_bboxes[:, -1], descending=True)[:cfg.max_per_img]
+            out_bboxes = out_bboxes[topk]
+            out_labels = out_labels[topk]
+        
         return out_bboxes, out_labels
 
 
