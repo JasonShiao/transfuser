@@ -651,7 +651,6 @@ class ChangeActorWaypointsToReachPosition(ChangeActorWaypoints):
 
         town_map = CarlaDataProvider.get_map()
         self._grp = GlobalRoutePlanner(town_map, 2)
-        self._grp.setup()
 
     def initialise(self):
         """

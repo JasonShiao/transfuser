@@ -108,7 +108,6 @@ class InTriggerDistanceToOSCPosition(AtomicCondition):
         if self._along_route:
             # Get the global route planner, used to calculate the route
             grp = GlobalRoutePlanner(self._map, 0.5)
-            grp.setup()
             self._grp = grp
         else:
             self._grp = None
@@ -174,9 +173,7 @@ class InTimeToArrivalToOSCPosition(AtomicCondition):
 
         if self._along_route:
             # Get the global route planner, used to calculate the route
-            dao = GlobalRoutePlannerDAO(self._map, 0.5)
-            grp = GlobalRoutePlanner(dao)
-            grp.setup()
+            grp = GlobalRoutePlanner(self._map, 0.5)
             self._grp = grp
         else:
             self._grp = None
@@ -844,9 +841,7 @@ class InTimeToArrivalToVehicle(AtomicCondition):
 
         if self._along_route:
             # Get the global route planner, used to calculate the route
-            dao = GlobalRoutePlannerDAO(self._map, 0.5)
-            grp = GlobalRoutePlanner(dao)
-            grp.setup()
+            grp = GlobalRoutePlanner(self._map, 0.5)
             self._grp = grp
         else:
             self._grp = None
