@@ -533,12 +533,13 @@ class LidarCenterNetHead(BaseDenseHead, BBoxTestMixin):
 
 
 class PIDController(object):
-    def __init__(self, K_P=1.0, K_I=0.0, K_D=0.0, n=20):
+    def __init__(self, K_P=1.0, K_I=0.0, K_D=0.0, n=30):
         self._K_P = K_P
         self._K_I = K_I
         self._K_D = K_D
 
         self._window = deque([0 for _ in range(n)], maxlen=n)
+        # NOTE: no dt specified, each step duration is assumed to be dt
 
     def step(self, error):
         self._window.append(error)
@@ -687,7 +688,7 @@ class LidarCenterNet(nn.Module):
         throttle = self.speed_controller.step(delta)
         throttle = np.clip(throttle, 0.0, self.config.clip_throttle)
         throttle = throttle if not brake else 0.0
-        aim = (waypoints[1] + waypoints[0]) / 2.0
+        aim = (waypoints[1] + waypoints[0]) / 2.0 # aim (pointing) vector to the middle of the next two waypoints
         angle = np.degrees(np.arctan2(aim[1], aim[0])) / 90.0
         if (speed < 0.01):
             angle = 0.0  # When we don't move we don't want the angle error to accumulate in the integral
@@ -702,7 +703,7 @@ class LidarCenterNet(nn.Module):
     
     def forward_ego(self, rgb, lidar_bev, target_point, target_point_image, ego_vel, bev_points=None, cam_points=None, save_path=None, expert_waypoints=None,
                     stuck_detector=0, forced_move=False, num_points=None, rgb_back=None, debug=False):
-        
+        # Narrowed down version of forward predict for ego vehicle control
         if(self.use_point_pillars == True):
             lidar_bev = self.point_pillar_net(lidar_bev, num_points)
             lidar_bev = torch.rot90(lidar_bev, -1, dims=(2, 3)) #For consitency this is also done in voxelization
@@ -749,6 +750,7 @@ class LidarCenterNet(nn.Module):
         return pred_wp, rotated_bboxes
 
     def forward(self, rgb, lidar_bev, ego_waypoint, target_point, target_point_image, ego_vel, bev, label, depth, semantic, num_points=None, save_path=None, bev_points=None, cam_points=None):
+        # Full version of forward predict for loss compute and update, including bev, semantic, depth and waypoint prediction
         loss = {}
 
         if(self.use_point_pillars == True):

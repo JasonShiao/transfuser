@@ -208,7 +208,7 @@ class GlobalConfig:
         if (setting == 'all'): # All towns used for training no validation data
             self.train_towns = os.listdir(self.root_dir)
             self.val_towns = [self.train_towns[0]]
-            self.train_data, self.val_data = [], []
+            self.train_data, self.val_data = [], [] # the paths to the data files not the data itself
             for town in self.train_towns:
                 root_files = os.listdir(os.path.join(self.root_dir, town)) #Town folders
                 for file in root_files:

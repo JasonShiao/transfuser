@@ -303,7 +303,7 @@ class Engine(object):
         # Train loop
         for data in tqdm(self.dataloader_train):
             self.optimizer.zero_grad(set_to_none=True)
-            losses = self.load_data_compute_loss(data)
+            losses = self.load_data_compute_loss(data) # various loss terms
             loss = torch.tensor(0.0).to(self.device, dtype=torch.float32)
 
             for key, value in losses.items():
