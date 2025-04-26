@@ -1042,8 +1042,8 @@ class LidarCenterNet(nn.Module):
         rgb_image = rgb[i].permute(1, 2, 0).detach().cpu().numpy()[:, :, [2, 1, 0]]
         rgb_image = cv2.resize(rgb_image, (1280 + 128, 320 + 32))
         assert (config.multitask)
-        images = np.concatenate((bev_image, images, ds_image), axis=1)
+        images = np.concatenate((bev_image, images, ds_image), axis=1) # horizontal (column) concat: left to right
 
-        images = np.concatenate((rgb_image, images), axis=0)
+        images = np.concatenate((rgb_image, images), axis=0) # vertical (row) concat: top to bottom
 
         cv2.imwrite(str(save_path + ("/%d.png" % (step // 2))), images)

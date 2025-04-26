@@ -20,7 +20,7 @@ class GlobalConfig:
     camera_pos = [1.3, 0.0, 2.3] #x, y, z mounting position of the camera
     camera_width = 960 # Camera width in pixel
     camera_height = 480 # Camera height in pixel
-    camera_fov = 120 #Camera FOV in degree
+    camera_fov = 120 # Camera FOV in degree, but the left,right,top,bottom 1/3 will be cropped, only the middle section will be used (effective fov = 40?)
     camera_rot_0 = [0.0, 0.0, 0.0] # Roll Pitch Yaw of camera 0 in degree
     camera_rot_1 = [0.0, 0.0, -60.0] # Roll Pitch Yaw of camera 1 in degree
     camera_rot_2 = [0.0, 0.0, 60.0] # Roll Pitch Yaw of camera 2 in degree

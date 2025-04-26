@@ -188,7 +188,7 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
             rgb_pos = cv2.cvtColor(input_data[rgb_cam][1][:, :, :3], cv2.COLOR_BGR2RGB)
             rgb_pos = self.scale_crop(Image.fromarray(rgb_pos), self.config.scale, self.config.img_width, self.config.img_width, self.config.img_resolution[0], self.config.img_resolution[0])
             rgb.append(rgb_pos)
-        rgb = np.concatenate(rgb, axis=1)
+        rgb = np.concatenate(rgb, axis=1) # concat horizontally
 
         if(SAVE_PATH != None): #Debug camera for visualizations
             # don't need buffer for it always use the latest one
@@ -219,7 +219,7 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
 
         waypoint_route = self._route_planner.run_step(denoised_pos)
         next_wp, next_cmd = waypoint_route[1] if len(waypoint_route) > 1 else waypoint_route[0]
-        result['next_command'] = next_cmd.value
+        result['next_command'] = next_cmd.value # RoadOption, e.g. LANEFOLLOW: 4, RIGHT: 2, LEFT: 1, STRAIGHT: 3
 
         theta = compass + np.pi/2
         R = np.array([
@@ -613,10 +613,12 @@ class RoutePlanner(object):
         self.scale = np.array([111324.60662786, 111319.490945]) # for carla 9.10
 
     def set_route(self, global_plan, gps=False):
+        # Sparse global plan
         self.route.clear()
 
         for pos, cmd in global_plan:
             if gps:
+                # lat, lon to x, y
                 pos = np.array([pos['lat'], pos['lon']])
                 pos -= self.mean
                 pos *= self.scale
@@ -627,6 +629,11 @@ class RoutePlanner(object):
             self.route.append((pos, cmd))
 
     def run_step(self, gps):
+        """
+        This method takes the current GPS position (gps) and 
+        updates the route by removed those waypoints too close to current pos 
+        , and give the next waypoint or command based on the distance from the current position.
+        """
         if len(self.route) <= 2:
             self.is_last = True
             return self.route
