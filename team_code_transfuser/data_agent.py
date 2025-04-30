@@ -8,8 +8,8 @@ import numpy as np
 import pygame
 import json
 
-from utils import lts_rendering
-from utils.map_utils import MapImage, encode_npy_to_pil, PIXELS_PER_METER
+from utils2 import lts_rendering
+from utils2.map_utils import MapImage, encode_npy_to_pil, PIXELS_PER_METER
 from submission_agent import HybridAgent
 
 
