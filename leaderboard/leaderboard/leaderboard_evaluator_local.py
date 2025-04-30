@@ -266,6 +266,7 @@ class LeaderboardEvaluator(object):
             self._agent_watchdog.start()
             agent_class_name = getattr(self.module_agent, 'get_entry_point')()
             if int(os.environ['DATAGEN'])==1:
+                print("Agent class name: ", agent_class_name)
                 self.agent_instance = getattr(self.module_agent, agent_class_name)(args.agent_config, config.index)
             else:
                 self.agent_instance = getattr(self.module_agent, agent_class_name)(args.agent_config)

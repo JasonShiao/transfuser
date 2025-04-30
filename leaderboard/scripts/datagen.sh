@@ -18,6 +18,7 @@ export CHECKPOINT_ENDPOINT=${WORK_DIR}/results/Town10HD_Scenario10.json
 export SAVE_PATH=${WORK_DIR}/results/Town10HD_Scenario10
 #export TEAM_AGENT=${WORK_DIR}/team_code_autopilot/data_agent.py
 export TEAM_AGENT=${WORK_DIR}/team_code_transfuser/data_agent.py
+export TEAM_CONFIG=${WORK_DIR}/model_ckpt/models_2022/transfuser
 export DEBUG_CHALLENGE=0
 export RESUME=1
 export DATAGEN=1
