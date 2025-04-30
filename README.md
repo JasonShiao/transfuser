@@ -108,6 +108,11 @@ A minimal example of running the training script on a single machine:
 cd team_code_transfuser
 python train.py --batch_size 10 --logdir /path/to/logdir --root_dir /path/to/dataset_root/ --parallel_training 0
 ```
+```Shell
+cd team_code_transfuser
+python train.py --batch_size 10 --logdir ../log --root_dir ../data --parallel_training 0
+--load_file ../model_ckpt/models_2022/transfuser/model_seed3_37.pth 
+```
 The training script has many more useful features documented at the start of the main function. 
 One of them is parallel training. 
 The script has to be started differently when training on a multi-gpu node:

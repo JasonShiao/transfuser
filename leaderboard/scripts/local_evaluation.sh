@@ -1,5 +1,5 @@
 echo "WARNING: Please modify the paths in local_evaluation.sh according to your setup"
-export CARLA_ROOT=${1:-/home/ubuntu/CARLA_0_9_14}
+export CARLA_ROOT=${1:-/home/ubuntu/carla} # /home/ubuntu/CARLA_0_9_14
 export WORK_DIR=${2:-/home/ubuntu/transfuser}
 
 export CARLA_SERVER=${CARLA_ROOT}/CarlaUE4.sh
