@@ -208,7 +208,7 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
                 }
 
         if (self.backbone != 'latentTF'):
-            lidar = input_data['lidar'][1][:, :3]
+            lidar = input_data['lidar'][1][:, :3] # x,y,z (excluding intensity)
             result['lidar'] = lidar
 
         pos = self._get_position(result)
@@ -262,7 +262,7 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
         else:
             # prepare LiDAR input
             if (self.config.use_point_pillars == True):
-                lidar_cloud = deepcopy(input_data['lidar'][1])
+                lidar_cloud = deepcopy(input_data['lidar'][1]) # exclude [0]: timestamp
                 lidar_cloud[:, 1] *= -1  # invert
                 lidar_bev = [torch.tensor(lidar_cloud).to('cuda', dtype=torch.float32)]
                 num_points = [torch.tensor(len(lidar_cloud)).to('cuda', dtype=torch.int32)]

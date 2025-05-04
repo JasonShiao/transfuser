@@ -257,7 +257,7 @@ class DataAgent(AutoPilot):
         depth = cv2.cvtColor(tick_data['depth'], cv2.COLOR_RGB2BGR)
         cv2.imwrite(str(self.save_path / 'depth' / ('%04d.png' % frame)), depth)
 
-        np.save(self.save_path / 'lidar' / ('%04d.npy' % frame), tick_data['lidar'], allow_pickle=True)
+        np.save(self.save_path / 'lidar' / ('%04d.npy' % frame), np.array([tick_data['lidar'][0], tick_data['lidar'][1]], dtype=object), allow_pickle=True)
         self.save_labels(self.save_path / 'label_raw' / ('%04d.json' % frame), tick_data['cars'])
         
     def save_labels(self, filename, result):

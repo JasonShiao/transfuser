@@ -60,7 +60,7 @@ class MyDataAgent(HybridAgent):
 
         self._active_traffic_light = None
 
-    def _init(self, hd_map):
+    def _init(self, hd_map=None):
         super()._init(hd_map)
         self._sensors = self.sensor_interface._sensors_objects
 
@@ -84,6 +84,8 @@ class MyDataAgent(HybridAgent):
 
         self.renderer = lts_rendering.Renderer(world_offset, self.map_dims, data_generation=True)
         
+        self.frame_rate_sim = 20
+        self.save_freq = self.frame_rate_sim//2 # By default, save once every 10 frames (0.5 seconds)
         self.shuffle_weather()
 
     def sensors(self):
@@ -91,34 +93,39 @@ class MyDataAgent(HybridAgent):
         if self.save_path is not None:
             result += [
                     {
-                        'type': 'sensor.camera.rgb',
-                        'x': 1.3, 'y': 0.0, 'z':2.3,
-                        'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
-                        'width': self.cam_config['width'], 'height': self.cam_config['height'], 'fov': self.cam_config['fov'],
-                        'id': 'rgb_front'
+                        'type': 'sensor.opendrive_map',
+                        'reading_frequency': 1e-6,
+                        'id': 'hd_map'
                     },
-                    {
-                        'type': 'sensor.camera.rgb',
-                        'x': 1.3, 'y': 0.0, 'z':2.3,
-                        'roll': 0.0, 'pitch': 0.0, 'yaw': -60.0,
-                        'width': self.cam_config['width'], 'height': self.cam_config['height'], 'fov': self.cam_config['fov'],
-                        'id': 'rgb_left'
-                    },
-                    {
-                        'type': 'sensor.camera.rgb',
-                        'x': 1.3, 'y': 0.0, 'z':2.3,
-                        'roll': 0.0, 'pitch': 0.0, 'yaw': 60.0,
-                        'width': self.cam_config['width'], 'height': self.cam_config['height'], 'fov': self.cam_config['fov'],
-                        'id': 'rgb_right'
-                    },
-                    {
-                        'type': 'sensor.lidar.ray_cast',
-                        'x': 1.3, 'y': 0.0, 'z': 2.5,
-                        'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
-                        'rotation_frequency': 20,
-                        'points_per_second': 1200000,
-                        'id': 'lidar'
-                    },
+                    # {
+                    #     'type': 'sensor.camera.rgb',
+                    #     'x': 1.3, 'y': 0.0, 'z':2.3,
+                    #     'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
+                    #     'width': self.cam_config['width'], 'height': self.cam_config['height'], 'fov': self.cam_config['fov'],
+                    #     'id': 'rgb_front'
+                    # },
+                    # {
+                    #     'type': 'sensor.camera.rgb',
+                    #     'x': 1.3, 'y': 0.0, 'z':2.3,
+                    #     'roll': 0.0, 'pitch': 0.0, 'yaw': -60.0,
+                    #     'width': self.cam_config['width'], 'height': self.cam_config['height'], 'fov': self.cam_config['fov'],
+                    #     'id': 'rgb_left'
+                    # },
+                    # {
+                    #     'type': 'sensor.camera.rgb',
+                    #     'x': 1.3, 'y': 0.0, 'z':2.3,
+                    #     'roll': 0.0, 'pitch': 0.0, 'yaw': 60.0,
+                    #     'width': self.cam_config['width'], 'height': self.cam_config['height'], 'fov': self.cam_config['fov'],
+                    #     'id': 'rgb_right'
+                    # },
+                    # {
+                    #     'type': 'sensor.lidar.ray_cast',
+                    #     'x': 1.3, 'y': 0.0, 'z': 2.5,
+                    #     'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
+                    #     'rotation_frequency': 20,
+                    #     'points_per_second': 1200000,
+                    #     'id': 'lidar'
+                    # },
                     {
                         'type': 'sensor.camera.semantic_segmentation',
                         'x': 1.3, 'y': 0.0, 'z':2.3,
@@ -162,6 +169,18 @@ class MyDataAgent(HybridAgent):
                         'id': 'depth_right'
                     },
                     ]
+        if (self.backbone == 'latentTF'):  # lidar not collected in (parent) HybridAgent but required for DataAgent
+            result += [
+                    {
+                        'type': 'sensor.lidar.ray_cast',
+                        'x': 1.3, 'y': 0.0, 'z': 2.5,
+                        'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
+                        'rotation_frequency': 20,
+                        'points_per_second': 1200000,
+                        'id': 'lidar'
+                    }
+                    ]
+
 
         return result
 
@@ -194,8 +213,8 @@ class MyDataAgent(HybridAgent):
             lidar = input_data['lidar']
             cars = self.get_bev_cars(lidar=lidar)
 
-            result.update({'lidar': lidar,
-                            'rgb': rgb,
+            result.update({'lidar_save': lidar,
+                            'rgb_save': rgb,
                             'cars': cars,
                             'semantics': semantics,
                             'depth': depth})
@@ -213,12 +232,9 @@ class MyDataAgent(HybridAgent):
 
         control = super().run_step(input_data, timestamp)
 
-        if self.step % self.save_freq == 0:
-            if self.save_path is not None:
-                tick_data = self.tick(input_data)
-                self.save_sensors(tick_data)
-                # self.shuffle_weather()
-            
+        if self.save_path is not None:
+            tick_data = self.tick(input_data)
+            self.save_sensors(tick_data)
         return control
 
     def shuffle_weather(self):
@@ -246,7 +262,7 @@ class MyDataAgent(HybridAgent):
         frame = self.step // self.save_freq
 
         # CV2 uses BGR internally so we need to swap the image channels before saving.
-        img = cv2.cvtColor(tick_data['rgb'],cv2.COLOR_RGB2BGR)
+        img = cv2.cvtColor(tick_data['rgb_save'],cv2.COLOR_RGB2BGR)
         cv2.imwrite(str(self.save_path / 'rgb' / ('%04d.png' % frame)), img)
 
         img = encode_npy_to_pil(np.asarray(tick_data['topdown'].squeeze().cpu()))
@@ -259,7 +275,7 @@ class MyDataAgent(HybridAgent):
         # depth = cv2.cvtColor(tick_data['depth'], cv2.COLOR_RGB2BGR)
         # cv2.imwrite(str(self.save_path / 'depth' / ('%04d.png' % frame)), depth)
 
-        np.save(self.save_path / 'lidar' / ('%04d.npy' % frame), tick_data['lidar'], allow_pickle=True)
+        np.save(self.save_path / 'lidar' / ('%04d.npy' % frame),  np.array([tick_data['lidar_save'][0], tick_data['lidar_save'][1]], dtype=object), allow_pickle=True)
         self.save_labels(self.save_path / 'label_raw' / ('%04d.json' % frame), tick_data['cars'])
         
     def save_labels(self, filename, result):
