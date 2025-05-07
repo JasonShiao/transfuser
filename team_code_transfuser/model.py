@@ -701,6 +701,38 @@ class LidarCenterNet(nn.Module):
 
         return steer, throttle, brake
     
+    def forward_backbone(self, rgb, lidar_bev, target_point, target_point_image, ego_vel):
+        """ For latent world model
+
+        Args:
+            rgb (_type_): _description_
+            lidar_bev (_type_): _description_
+            ego_vel (_type_): _description_
+
+        Returns:
+            _type_: fused_features is the latent
+        """
+        # Forward pass through the backbone
+        if(self.use_point_pillars == True):
+            lidar_bev = self.point_pillar_net(lidar_bev)
+            lidar_bev = torch.rot90(lidar_bev, -1, dims=(2, 3))
+        
+        if self.use_target_point_image:
+            # print(f"lidar_bev.shape: {lidar_bev.shape}")
+            # print(f"target_point_image.shape: {target_point_image.shape}")
+            lidar_bev = torch.cat((lidar_bev, target_point_image), dim=1)
+        
+        if (self.backbone == 'transFuser'):
+            features, image_features_grid, fused_features = self._model(rgb, lidar_bev, ego_vel)
+        elif (self.backbone == 'late_fusion'):
+            features, image_features_grid, fused_features = self._model(rgb, lidar_bev, ego_vel)
+        elif (self.backbone == 'geometric_fusion'):
+            features, image_features_grid, fused_features = self._model(rgb, lidar_bev, ego_vel)
+        elif (self.backbone == 'latentTF'):
+            features, image_features_grid, fused_features = self._model(rgb, lidar_bev, ego_vel)
+        
+        return features, image_features_grid, fused_features
+    
     def forward_ego(self, rgb, lidar_bev, target_point, target_point_image, ego_vel, bev_points=None, cam_points=None, save_path=None, expert_waypoints=None,
                     stuck_detector=0, forced_move=False, num_points=None, rgb_back=None, debug=False):
         # Narrowed down version of forward predict for ego vehicle control
