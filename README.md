@@ -110,7 +110,7 @@ python train.py --batch_size 10 --logdir /path/to/logdir --root_dir /path/to/dat
 ```
 ```Shell
 cd team_code_transfuser
-python train.py --batch_size 10 --logdir ../log --root_dir ../data --parallel_training 0
+python train.py --batch_size 10 --logdir ../log2 --root_dir ../data --parallel_training 0
 --load_file ../model_ckpt/models_2022/transfuser/model_seed3_37.pth 
 ```
 The training script has many more useful features documented at the start of the main function. 
@@ -127,6 +127,27 @@ Set --nproc_per_node to the number of available GPUs on your node.
 
 The evaluation agent file is build to evaluate models trained with multiple GPUs. 
 If you want to evaluate a model trained with a single GPU you need to remove [this line](https://github.com/autonomousvision/transfuser/blob/a7d4db684c160095dec03851aff5ce92e36b2387/team_code_transfuser/submission_agent.py#LL95C18-L95C18).
+
+
+## World model related (CS558)
+1. Collect data using autopilot data agent (the timing for shuffle weather is changed)
+```
+./leaderboard/scripts/datagen.sh <carla root> <working directory of this repo (*/transfuser/)>
+```
+2. Convert from raw data into latent dataset
+```
+python generate_latent.py --logdir /home/ubuntu/transfuser/log --root_dir /home/ubuntu/transfuser/results/ --load_file ../model_ckpt/models_2022/transfuser/model_seed3_37.pth --use_velocity 1 
+```
+3.  Train world model
+```
+python3 train_latent_world_model.py
+```
+4. (Change config if needed) and then train the planner (freeze transfuser backbone and world model)
+```
+cd team_code_transfuser
+python train.py --batch_size 10 --logdir ../log2 --root_dir ../data --parallel_training 0
+--load_file ../model_ckpt/models_2022/transfuser/model_seed3_37.pth 
+```
 
 
 ## Evaluation
