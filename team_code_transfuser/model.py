@@ -35,6 +35,7 @@ MODELS.register_module(name='L1Loss', module=L1Loss)
 MODELS.register_module(name='SmoothL1Loss', module=SmoothL1Loss)
 MODELS.register_module(name='CrossEntropyLoss', module=CrossEntropyLoss)
 
+from world_model import TransformerWorldModel
 
 import math
 
@@ -622,7 +623,23 @@ class LidarCenterNet(nn.Module):
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.output = nn.Linear(self.config.gru_hidden_size, 3).to(self.device)
-
+        
+        
+        self.last_n_latents = deque(maxlen=4)
+        # world model
+        self.world_model = TransformerWorldModel(latent_dim=512, seq_len=2).to(self.device)
+        # Load ckpt
+        ckpt = torch.load("/home/ubuntu/transfuser/team_code_transfuser/train_logs/wm_ckpt_epoch_10.pth", map_location=self.device)
+        self.world_model.load_state_dict(ckpt)
+        
+        if self.config.train_planner_only:
+            print("Training planner only, freezing all other parameters")
+            for param in self.parameters():
+                param.requires_grad = False
+            # TODO: requires grad for head (planner)
+            for param in self.head.parameters():
+                param.requires_grad = True
+        
         # pid controller
         self.turn_controller = PIDController(K_P=config.turn_KP, K_I=config.turn_KI, K_D=config.turn_KD, n=config.turn_n)
         self.speed_controller = PIDController(K_P=config.speed_KP, K_I=config.speed_KI, K_D=config.speed_KD, n=config.speed_n)
@@ -754,7 +771,26 @@ class LidarCenterNet(nn.Module):
         else:
             raise ("The chosen vision backbone does not exist. The options are: transFuser, late_fusion, geometric_fusion, latentTF")
 
-        pred_wp, _, _, _, _ = self.forward_gru(fused_features, target_point)
+        # Add latent world model prediction
+        if self.config.use_latent_world_model:
+            if len(self.last_n_latents) != 0:
+                prev_fused_features = self.last_n_latents.pop()
+            else:
+                # Use current fused features as previous features
+                prev_fused_features = fused_features
+            print(f"prev_fused_features.shape: {prev_fused_features.shape}")
+            print(f"fused_features.shape: {fused_features.shape}")
+            prev_current_fused_features = torch.stack([prev_fused_features, fused_features]).to(device)
+            pred_fused_features = self.world_model(prev_current_fused_features)
+            print(f"pred_fused_features.shape: {pred_fused_features.shape}")
+            
+            self.last_n_latents.append(fused_features)
+            self.last_n_latents.popleft()
+
+            combined_fused_features = torch.cat([prev_current_fused_features, pred_fused_features])
+            pred_wp, _, _, _, _ = self.forward_gru(combined_fused_features, target_point)
+        else:
+            pred_wp, _, _, _, _ = self.forward_gru(fused_features, target_point)
 
         preds = self.head([features[0]])
         results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
@@ -805,7 +841,26 @@ class LidarCenterNet(nn.Module):
             raise ("The chosen vision backbone does not exist. The options are: transFuser, late_fusion, geometric_fusion, latentTF")
 
 
-        pred_wp, _, _, _, _ = self.forward_gru(fused_features, target_point)
+        # Add latent world model prediction
+        if self.config.use_latent_world_model:
+            if len(self.last_n_latents) != 0:
+                prev_fused_features = self.last_n_latents.pop()
+            else:
+                # Use current fused features as previous features
+                prev_fused_features = fused_features
+            print(f"prev_fused_features.shape: {prev_fused_features.shape}")
+            print(f"fused_features.shape: {fused_features.shape}")
+            prev_current_fused_features = torch.stack([prev_fused_features, fused_features]).to(device)
+            pred_fused_features = self.world_model(prev_current_fused_features)
+            print(f"pred_fused_features.shape: {pred_fused_features.shape}")
+            
+            self.last_n_latents.append(fused_features)
+            self.last_n_latents.popleft()
+
+            combined_fused_features = torch.cat([prev_current_fused_features, pred_fused_features])
+            pred_wp, _, _, _, _ = self.forward_gru(combined_fused_features, target_point)
+        else:
+            pred_wp, _, _, _, _ = self.forward_gru(fused_features, target_point)
 
         # pred topdown view
         pred_bev = self.pred_bev(features[0])

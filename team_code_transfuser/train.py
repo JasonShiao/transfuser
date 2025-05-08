@@ -20,6 +20,7 @@ from torch.distributed.elastic.multiprocessing.errors import record
 import random
 from torch.distributed.optim import ZeroRedundancyOptimizer
 import torch.multiprocessing as mp
+from collections import OrderedDict
 
 from diskcache import Cache
 # Records error and tracebacks in case of failure
@@ -179,8 +180,16 @@ def main():
     if (not (args.load_file is None)):
         # Load checkpoint
         print("=============load=================")
-        model.load_state_dict(torch.load(args.load_file, map_location=model.device))
-        optimizer.load_state_dict(torch.load(args.load_file.replace("model_", "optimizer_"), map_location=model.device))
+        def remove_module_prefix(state_dict):
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                new_key = k.replace("module.", "")  # remove module.
+                new_state_dict[new_key] = v
+            return new_state_dict
+        new_state_dict = remove_module_prefix(torch.load(args.load_file, map_location=model.device))
+        model.load_state_dict(new_state_dict, strict=False)
+        # model.load_state_dict(torch.load(args.load_file, map_location=model.device))
+        #optimizer.load_state_dict(torch.load(args.load_file.replace("model_", "optimizer_"), map_location=model.device))
 
 
     trainer = Engine(model=model, optimizer=optimizer, dataloader_train=dataloader_train, dataloader_val=dataloader_val,

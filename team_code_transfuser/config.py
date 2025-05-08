@@ -184,6 +184,11 @@ class GlobalConfig:
     gpt_linear_layer_init_std  = 0.02 # Std  of the normal distribution with which the linear layers in the GPT are initialized
     gpt_layer_norm_init_weight = 1.0 # Initial weight of the layer norms in the gpt.
 
+    # Latent World Model
+    use_latent_world_model = False
+    train_planner_only = False
+    
+
     # Controller
     turn_KP = 1.25
     turn_KI = 0.75

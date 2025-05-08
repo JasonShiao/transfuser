@@ -84,6 +84,8 @@ class DataAgent(AutoPilot):
 
         self.renderer = lts_rendering.Renderer(world_offset, self.map_dims, data_generation=True)
 
+        self.shuffle_weather()
+
     def sensors(self):
         result = super().sensors()
         if self.save_path is not None:
@@ -215,7 +217,7 @@ class DataAgent(AutoPilot):
             if self.save_path is not None:
                 tick_data = self.tick(input_data)
                 self.save_sensors(tick_data)
-                self.shuffle_weather()
+                #self.shuffle_weather()
             
         return control
 
@@ -251,11 +253,11 @@ class DataAgent(AutoPilot):
         img_save=np.moveaxis(img,0,2)
         cv2.imwrite(str(self.save_path / 'topdown' / ('encoded_%04d.png' % frame)), img_save)
 
-        semantics = tick_data['semantics']
-        cv2.imwrite(str(self.save_path / 'semantics' / ('%04d.png' % frame)), semantics)
+        # semantics = tick_data['semantics']
+        # cv2.imwrite(str(self.save_path / 'semantics' / ('%04d.png' % frame)), semantics)
 
-        depth = cv2.cvtColor(tick_data['depth'], cv2.COLOR_RGB2BGR)
-        cv2.imwrite(str(self.save_path / 'depth' / ('%04d.png' % frame)), depth)
+        # depth = cv2.cvtColor(tick_data['depth'], cv2.COLOR_RGB2BGR)
+        # cv2.imwrite(str(self.save_path / 'depth' / ('%04d.png' % frame)), depth)
 
         np.save(self.save_path / 'lidar' / ('%04d.npy' % frame), np.array([tick_data['lidar'][0], tick_data['lidar'][1]], dtype=object), allow_pickle=True)
         self.save_labels(self.save_path / 'label_raw' / ('%04d.json' % frame), tick_data['cars'])
