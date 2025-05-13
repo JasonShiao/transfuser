@@ -215,8 +215,24 @@ class GlobalConfig:
             self.val_towns = [self.train_towns[0]]
             self.train_data, self.val_data = [], [] # the paths to the data files not the data itself
             for town in self.train_towns:
+                # filter out some dataset to reduce training time
+                if town in ['ll_dataset_23_11',
+                                'lr_dataset_23_11',
+                                'rl_dataset_23_11',
+                                'rr_dataset_23_11',
+                                'int_u_dataset_23_11',
+                                'int_s_dataset_23_11',
+                                'int_r_dataset_23_11',
+                                'int_l_dataset_23_11',
+                                'dirt_dataset_23_11',
+                                'cycl_dataset_23_11',
+                                'coke_dataset_23_11',]:
+                    print("Skip dataset: ", town)
+                    continue
+                print("Train Folder: ", town)
                 root_files = os.listdir(os.path.join(self.root_dir, town)) #Town folders
                 for file in root_files:
+                    print("File: ", file)
                     if not os.path.isfile(os.path.join(self.root_dir, file)):
                         self.train_data.append(os.path.join(self.root_dir, town, file))
             for town in self.val_towns:

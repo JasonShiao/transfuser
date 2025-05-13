@@ -6,12 +6,14 @@ import cv2
 import carla
 from PIL import Image
 from collections import deque
+import datetime
 
 import torch
 import numpy as np
 import math
 
-from leaderboard.autoagents import autonomous_agent
+from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+from leaderboard.autoagents import autonomous_agent#, autonomous_agent_local
 from model import LidarCenterNet
 from config import GlobalConfig
 from data import lidar_to_histogram_features, draw_target_point, lidar_bev_cam_correspondences
@@ -31,12 +33,24 @@ def get_entry_point():
     return 'HybridAgent'
 
 
+#class HybridAgent(autonomous_agent_local.AutonomousAgent):
 class HybridAgent(autonomous_agent.AutonomousAgent):
     def setup(self, path_to_conf_file, route_index=None):
-        self.track = autonomous_agent.Track.SENSORS
+        self.track = autonomous_agent.Track.SENSORS# MAP
         self.config_path = path_to_conf_file
         self.step = -1
         self.initialized = False
+
+        # TODO: Avoid conflict with other save_path?
+        # self.route_index = route_index
+        # now = datetime.datetime.now()
+        # string = pathlib.Path(os.environ['ROUTES']).stem + '_'
+        # string += f'route{self.route_index}_'
+        # string += '_'.join(map(lambda x: '%02d' % x, (now.month, now.day, now.hour, now.minute, now.second)))
+        # print (string)
+        # self.save_path = pathlib.Path("results_transfuser_datagent") / string
+        # self.save_path.mkdir(parents=True, exist_ok=False)
+        # print("save_path: ", self.save_path)
 
         args_file = open(os.path.join(path_to_conf_file, 'args.txt'), 'r')
         self.args = json.load(args_file)
@@ -107,12 +121,21 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
         self.steer_damping = self.config.steer_damping
         self.rgb_back = None #For debugging
 
+        # self.detection_radius = 30.0                    # Distance of obstacles (in meters) in which we will check for collisions
+        # self.light_radius = 15.0                        # Distance of traffic lights considered relevant (in meters)
 
 
-    def _init(self):
+    def _init(self, hd_map=None):
+        self.world_map = carla.Map("RouteMap", hd_map[1]['opendrive'])
+
         self._route_planner = RoutePlanner(self.config.route_planner_min_distance, self.config.route_planner_max_distance)
         self._route_planner.set_route(self._global_plan, True)
         self.initialized = True
+        
+        # Privileged
+        self._vehicle = CarlaDataProvider.get_hero_actor()
+        self._world = self._vehicle.get_world()
+
 
     def _get_position(self, tick_data):
         gps = tick_data['gps']
@@ -176,6 +199,8 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
                             'type': 'sensor.lidar.ray_cast',
                             'x': self.lidar_pos[0], 'y': self.lidar_pos[1], 'z': self.lidar_pos[2],
                             'roll': self.config.lidar_rot[0], 'pitch': self.config.lidar_rot[1], 'yaw': self.config.lidar_rot[2],
+                            # 'rotation_frequency': 20,
+                            # 'points_per_second': 1200000,
                             'id': 'lidar'
                            })
 
@@ -238,7 +263,10 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
         self.step += 1
 
         if not self.initialized:
-            self._init()
+            if ('hd_map' in input_data.keys()):
+                self._init(input_data['hd_map'])
+            else:
+                self._init()
             control = carla.VehicleControl()
             control.steer = 0.0
             control.throttle = 0.0
@@ -596,6 +624,20 @@ class HybridAgent(autonomous_agent.AutonomousAgent):
         cropped_image = image[start_y:start_y+crop_h, start_x:start_x+crop_w]
         cropped_image = np.transpose(cropped_image, (2,0,1))
         return cropped_image
+    
+    def _get_forward_speed(self, transform=None, velocity=None):
+        """ Convert the vehicle transform directly to forward speed """
+        if not velocity:
+            velocity = self._vehicle.get_velocity()
+        if not transform:
+            transform = self._vehicle.get_transform()
+
+        vel_np = np.array([velocity.x, velocity.y, velocity.z])
+        pitch = np.deg2rad(transform.rotation.pitch)
+        yaw = np.deg2rad(transform.rotation.yaw)
+        orientation = np.array([np.cos(pitch) * np.cos(yaw), np.cos(pitch) * np.sin(yaw), np.sin(pitch)])
+        speed = np.dot(vel_np, orientation)
+        return speed
 
     def destroy(self):
         del self.nets

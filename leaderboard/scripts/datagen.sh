@@ -10,17 +10,19 @@ export LEADERBOARD_ROOT=${WORK_DIR}/leaderboard
 #export PYTHONPATH="${CARLA_ROOT}/PythonAPI/carla/":"${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 export PYTHONPATH="${SCENARIO_RUNNER_ROOT}":"${LEADERBOARD_ROOT}":${PYTHONPATH}
 
-export SCENARIOS=${WORK_DIR}/leaderboard/data/training/scenarios/Scenario10/Town10HD_Scenario10.json
-export ROUTES=${WORK_DIR}/leaderboard/data/training/routes/Scenario10/Town10HD_Scenario10.xml
+export SCENARIOS=${WORK_DIR}/leaderboard/data/training/scenarios/Scenario4/Town03_Scenario4.json # Scenario10/Town10HD_Scenario10.json
+export ROUTES=${WORK_DIR}/leaderboard/data/training/routes/Scenario4/Town03_Scenario4.xml # Scenario10/Town10HD_Scenario10.xml
 export REPETITIONS=1
 export CHALLENGE_TRACK_CODENAME=MAP
-export CHECKPOINT_ENDPOINT=${WORK_DIR}/results/Town10HD_Scenario10.json
-export SAVE_PATH=${WORK_DIR}/results/Town10HD_Scenario10
-#export TEAM_AGENT=${WORK_DIR}/team_code_autopilot/data_agent.py
-export TEAM_AGENT=${WORK_DIR}/team_code_transfuser/data_agent.py
-export TEAM_CONFIG=${WORK_DIR}/model_ckpt/models_2022/transfuser
-export DEBUG_CHALLENGE=0
-export RESUME=1
+export CHECKPOINT_ENDPOINT=${WORK_DIR}/log/Town03_Scenario4.json # Town10HD_Scenario10.json
+export SAVE_PATH=${WORK_DIR}/results/Town03_Scenario4 # Town10HD_Scenario10
+
+export TEAM_AGENT=${WORK_DIR}/team_code_autopilot/data_agent.py
+#export TEAM_AGENT=${WORK_DIR}/team_code_transfuser/data_agent.py
+#export TEAM_CONFIG=${WORK_DIR}/model_ckpt/models_2022/transfuser
+
+export DEBUG_CHALLENGE=1
+#export RESUME=1
 export DATAGEN=1
 
 python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator_local.py \
@@ -31,5 +33,5 @@ python3 ${LEADERBOARD_ROOT}/leaderboard/leaderboard_evaluator_local.py \
 --checkpoint=${CHECKPOINT_ENDPOINT} \
 --agent=${TEAM_AGENT} \
 --agent-config=${TEAM_CONFIG} \
---debug=${DEBUG_CHALLENGE} \
---resume=${RESUME}
+--debug=${DEBUG_CHALLENGE}
+#--resume=${RESUME}

@@ -118,14 +118,6 @@ class MyDataAgent(HybridAgent):
                     #     'width': self.cam_config['width'], 'height': self.cam_config['height'], 'fov': self.cam_config['fov'],
                     #     'id': 'rgb_right'
                     # },
-                    # {
-                    #     'type': 'sensor.lidar.ray_cast',
-                    #     'x': 1.3, 'y': 0.0, 'z': 2.5,
-                    #     'roll': 0.0, 'pitch': 0.0, 'yaw': -90.0,
-                    #     'rotation_frequency': 20,
-                    #     'points_per_second': 1200000,
-                    #     'id': 'lidar'
-                    # },
                     {
                         'type': 'sensor.camera.semantic_segmentation',
                         'x': 1.3, 'y': 0.0, 'z':2.3,
@@ -223,6 +215,7 @@ class MyDataAgent(HybridAgent):
 
     @torch.no_grad()
     def run_step(self, input_data, timestamp):
+        print(f'Run step')
         if not ('hd_map' in input_data.keys()) and not self.initialized:
             control = carla.VehicleControl()
             control.steer = 0.0
@@ -232,9 +225,15 @@ class MyDataAgent(HybridAgent):
 
         control = super().run_step(input_data, timestamp)
 
+        #if self.step % self.save_freq == 0:
+        # Save every step
         if self.save_path is not None:
             tick_data = self.tick(input_data)
+            print('Saving data...')
             self.save_sensors(tick_data)
+            # self.shuffle_weather()
+
+        print(f'control: {control.steer}, {control.throttle}, {control.brake}')
         return control
 
     def shuffle_weather(self):

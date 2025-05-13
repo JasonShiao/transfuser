@@ -90,18 +90,22 @@ class LeaderboardEvaluator(object):
                 raise ImportError("CARLA version 0.9.10.1 or newer required. CARLA version found: {}".format(dist))
 
         # Load agent
+        print('load agent')
         module_name = os.path.basename(args.agent).split('.')[0]
         sys.path.insert(0, os.path.dirname(args.agent))
         self.module_agent = importlib.import_module(module_name)
 
         # Create the ScenarioManager
+        print('create ScenarioManager')
         self.manager = ScenarioManager(args.timeout, args.debug > 1)
 
         # Time control for summary purposes
+        print('Game time')
         self._start_time = GameTime.get_time()
         self._end_time = None
 
         # Create the agent timer
+        print('agent timer')
         self._agent_watchdog = Watchdog(int(float(args.timeout)))
         signal.signal(signal.SIGINT, self._signal_handler)
 
@@ -398,19 +402,26 @@ class LeaderboardEvaluator(object):
         route_indexer = RouteIndexer(args.routes, args.scenarios, args.repetitions)
 
         if args.resume:
+            print('check 0')
             route_indexer.resume(args.checkpoint)
             self.statistics_manager.resume(args.checkpoint)
         else:
+            print('check 1')
             self.statistics_manager.clear_record(args.checkpoint)
+            print('check 2')
             route_indexer.save_state(args.checkpoint)
+            print('check 3')
 
         while route_indexer.peek():
             # setup
+            print('check 4')
             config = route_indexer.next()
 
             # run
+            print('check 5')
             self._load_and_run_scenario(args, config)
 
+            print('check 6')
             route_indexer.save_state(args.checkpoint)
 
         # save global statistics

@@ -204,6 +204,7 @@ class DataAgent(AutoPilot):
 
     @torch.no_grad()
     def run_step(self, input_data, timestamp):
+        print(f'Run step')
         if not ('hd_map' in input_data.keys()) and not self.initialized:
             control = carla.VehicleControl()
             control.steer = 0.0
@@ -216,6 +217,7 @@ class DataAgent(AutoPilot):
         if self.step % self.save_freq == 0:
             if self.save_path is not None:
                 tick_data = self.tick(input_data)
+                #print(tick_data['lidar'])
                 self.save_sensors(tick_data)
                 #self.shuffle_weather()
             
